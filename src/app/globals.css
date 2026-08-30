@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/*
+ * Tokens sourced from design-system/mono-cm-website/MASTER.md — the source of truth.
+ * Dark is the brand default; light is an explicit user choice via the theme
+ * toggle (src/components/ThemeToggle.tsx), not automatic from system
+ * preference alone — see the "Theme toggle" note in design.md for why this
+ * supersedes the original "dark-only" decision.
+ */
+:root {
+  --background: #0a0b0d;
+  --surface: #14171a;
+  --foreground: #f5f7f8;
+  --foreground-muted: #9aa4ac;
+  --accent: #10b981;
+  --accent-bright: #34d399;
+  --on-accent: #0a0b0d;
+  --secondary: #94a3b8;
+  --cyan: #22d3ee;
+  --cyan-bright: #67e8f9;
+  --border: rgba(255, 255, 255, 0.08);
+  --destructive: #f87171;
+  --ring: #34d399;
+}
+
+/* Light theme — every pair here is WCAG-contrast-checked, see design.md → Theme toggle. */
+:root[data-theme="light"] {
+  --background: #fafafa;
+  --surface: #f0f2f3;
+  --foreground: #0a0b0d;
+  --foreground-muted: #5b6470;
+  --accent: #047857;
+  --accent-bright: #059669;
+  --on-accent: #ffffff;
+  --secondary: #64748b;
+  --border: rgba(0, 0, 0, 0.08);
+  --destructive: #dc2626;
+  --ring: #047857;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-accent: var(--accent);
+  --color-accent-bright: var(--accent-bright);
+  --color-on-accent: var(--on-accent);
+  --color-secondary: var(--secondary);
+  --color-cyan: var(--cyan);
+  --color-cyan-bright: var(--cyan-bright);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-space-grotesk);
+
+  /* Typography scale — design-system/mono-cm-website/MASTER.md → Typography → Scale.
+     Tailwind v4 pairs a --text-{name} font-size with a --text-{name}--line-height. */
+  --text-hero: clamp(2.75rem, 2rem + 3vw, 6rem);
+  --text-hero--line-height: 1.05;
+  --text-h1: clamp(2rem, 1.6rem + 1.6vw, 3.25rem);
+  --text-h1--line-height: 1.1;
+  --text-h2: clamp(1.5rem, 1.3rem + 0.8vw, 2.125rem);
+  --text-h2--line-height: 1.2;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.5;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.4;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus visibility — never remove, per design-system/mono-cm-website/MASTER.md checklist. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Reveal-on-scroll baseline for the Reveal component (non-pinned sections). */
+.reveal {
+  opacity: 0;
+  transform: translateY(1rem);
+  transition:
+    opacity 400ms ease,
+    transform 400ms ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
