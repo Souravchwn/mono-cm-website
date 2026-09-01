@@ -1,5 +1,6 @@
 import type { SVGProps } from "react";
 import { GridGlow } from "@/components/GridGlow";
+import { ParallaxLayer } from "@/components/ParallaxLayer";
 
 // lucide-react dropped brand/logo icons; these are minimal inline
 // equivalents rather than pulling in a second icon package for two glyphs.
@@ -43,6 +44,11 @@ export function Footer() {
   return (
     <footer id="10-footer" className="relative overflow-hidden px-8 py-12 sm:px-16">
       <GridGlow />
+      <ParallaxLayer
+        speed={0.2}
+        className="pointer-events-none absolute bottom-[-4rem] left-[-6rem] h-[22rem] w-[22rem] rounded-full blur-[80px]"
+        style={{ background: "var(--glow-emerald)" }}
+      />
       {/* Was a single wrapping row of links — the last thing a sceptical buyer
           sees, and it read as a placeholder. Same links, same pending states,
           grouped under labels so the page closes properly. */}

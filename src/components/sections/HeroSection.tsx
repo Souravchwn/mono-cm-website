@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useScrollScene } from "@/lib/use-scroll-scene";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
-import { HorizonScene } from "@/components/scenes/HorizonScene";
+import { HorizonFlythroughScene } from "@/components/scenes/HorizonFlythroughScene";
 import { Button } from "@/components/ui/Button";
 import { useWaitlistHandoff } from "@/lib/waitlist-handoff";
 import { scrollToSection } from "@/lib/scroll-to-section";
@@ -19,47 +19,69 @@ export function HeroSection() {
   // type an address, press the page's primary CTA, and get no response at all.
   const { startHandoff } = useWaitlistHandoff();
   const [email, setEmail] = useState("");
-  const starsRef = useRef<HTMLDivElement>(null);
-  const mountainRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
 
-  // Parallax drift on the three horizon-scene layers, riding this pinned
-  // section's own scroll-scrubbed timeline rather than an independent
-  // ScrollTrigger — both live inside the `sticky` pinned viewport, which
-  // never itself translates during the pin, so a separately-triggered
-  // ScrollTrigger targeting them would compute its start/end off a sticky
-  // element's already-stuck geometry. Folding it into one timeline
-  // sidesteps that entirely (same reasoning as the old building-scene
-  // parallax this replaces).
-  const wrapperRef = useScrollScene((tl) => {
-    if (starsRef.current) tl.to(starsRef.current, { yPercent: 8, ease: "none" }, 0);
-    if (mountainRef.current) tl.to(mountainRef.current, { yPercent: 14, ease: "none" }, 0);
-    if (glowRef.current) tl.to(glowRef.current, { yPercent: 22, ease: "none" }, 0);
-  });
+  // Drives the Three.js flythrough (HorizonFlythroughScene) rather than
+  // tweening DOM refs — a plain object with a numeric property is a valid
+  // GSAP tween target (same trick WaitlistSection uses to tween
+  // BuildingScene3D's material intensities directly), so the scene just
+  // reads `.value` every animation frame instead of this section owning a
+  // second scroll listener. Riding this pinned section's own scroll-scrubbed
+  // timeline, not an independent ScrollTrigger, for the usual reason: both
+  // live inside the `sticky` pinned viewport, which never itself translates
+  // during the pin, so a separately-triggered ScrollTrigger would compute
+  // its start/end off already-stuck geometry.
+  const progressRef = useRef({ value: 0 });
+  const wrapperRef = useScrollScene(
+    (tl) => {
+      tl.to(progressRef.current, { value: 1, ease: "none" });
+    },
+    () => {
+      // Reduced motion: render the scroll-100% end-state directly, per
+      // context/storyboard.md's reduced-motion rule.
+      progressRef.current.value = 1;
+    },
+  );
 
   return (
     <section id="01-hero" aria-label="Hero">
-      <div ref={wrapperRef} className="relative h-[200vh]">
+      {/* 300vh, not 200vh — the flythrough is now four beats (zoom, transition,
+          city arrival, pull-back), and 200vh made all four feel rushed. */}
+      <div ref={wrapperRef} className="relative h-[300vh]">
         <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col justify-center overflow-hidden border-b border-border px-8 sm:px-16">
-          <HorizonScene
-            starsRef={starsRef}
-            mountainRef={mountainRef}
-            glowRef={glowRef}
-            reducedMotion={reducedMotion}
-          />
+          <HorizonFlythroughScene progressRef={progressRef} reducedMotion={reducedMotion} />
 
           <div className="relative z-[1] mx-auto flex w-full max-w-7xl flex-col items-start gap-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-accent-bright/35 bg-accent/10 px-3 py-1.5 text-label font-display font-medium tracking-wide text-accent-bright uppercase">
+            {/* Fixed dark-mode accent (#34D399), not the theme token: in light
+                mode --accent-bright is a darker #059669 tuned for contrast on
+                a light page background, which reads poorly against this
+                section's always-dark horizon-scene backdrop. */}
+            <span
+              className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-label font-display font-medium tracking-wide uppercase"
+              style={{
+                borderColor: "rgba(52,211,153,0.35)",
+                backgroundColor: "rgba(16,185,129,0.1)",
+                color: "#34D399",
+              }}
+            >
               Production-Centric Construction Engine
             </span>
-            <h1 className="font-display text-[clamp(2.75rem,2rem+4vw,5.6rem)] leading-[0.98] font-semibold tracking-tight text-balance text-foreground">
+            {/*
+              text-[#F5F7F8]/text-[#9AA4AC] rather than text-foreground/-muted:
+              HorizonScene behind this content is a fixed night-sky backdrop
+              that deliberately does not follow the light/dark toggle (see
+              design.md — same "always dark" scoping as the old audience-band
+              exception). With the theme tokens, this heading flipped to
+              near-black in light mode and became unreadable against its own
+              dark background — confirmed live before this fix.
+            */}
+            <h1 className="font-display text-[clamp(2.75rem,2rem+4vw,5.6rem)] leading-[0.98] font-semibold tracking-tight text-balance text-[#F5F7F8]">
               The{" "}
               <span className="bg-gradient-to-r from-accent-bright to-cyan bg-clip-text text-transparent">
                 Production&#8209;Centric
               </span>{" "}
               Construction Engine.
             </h1>
-            <p className="max-w-md text-lg text-foreground-muted">
+            <p className="max-w-md text-lg text-[#9AA4AC]">
               One source of truth for every dollar, drawing, material, and worker on your site.
             </p>
             <div className="mt-2 flex w-full flex-wrap items-center gap-4">
@@ -97,7 +119,7 @@ export function HeroSection() {
               </form>
               <a
                 href="#02-production-engine"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground opacity-90 transition-colors duration-150 hover:text-accent-bright hover:opacity-100"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#F5F7F8] opacity-90 transition-colors duration-150 hover:text-accent-bright hover:opacity-100"
               >
                 See it in action <span aria-hidden="true">&rarr;</span>
               </a>

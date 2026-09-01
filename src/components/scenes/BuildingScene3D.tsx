@@ -168,7 +168,6 @@ export function BuildingScene3D({
         />
         <ambientLight color={0x99aabb} intensity={0.55} />
         <directionalLight color={0xffffff} intensity={0.7} position={[5, 8, 4]} />
-        <gridHelper args={[16, 16, 0x18302a, 0x0d1216]} position={[0, -0.02, 0]} />
         <RotatingRig autoRotate={autoRotate}>
           <group position={[0, -((FLOOR_COUNT * (FLOOR_H + FLOOR_GAP)) / 2) + 0.25, 0]}>
             <Floors floorMaterials={floorMaterials} />

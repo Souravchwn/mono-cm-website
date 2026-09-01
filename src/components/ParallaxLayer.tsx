@@ -12,13 +12,16 @@ import { useParallax } from "@/lib/use-parallax";
  */
 export function ParallaxLayer({
   speed,
+  zoom = 0,
   className = "",
   style,
 }: {
   speed: number;
+  /** Optional scale-up over the scrub range — see use-parallax.ts. */
+  zoom?: number;
   className?: string;
   style?: CSSProperties;
 }) {
-  const ref = useParallax<HTMLDivElement>(speed);
+  const ref = useParallax<HTMLDivElement>(speed, zoom);
   return <div ref={ref} aria-hidden="true" className={className} style={style} />;
 }

@@ -16,10 +16,7 @@ export function GridGlow() {
       />
       <div
         className="absolute top-1/2 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(52,211,153,0.16), rgba(34,211,238,0.07) 45%, transparent 70%)",
-        }}
+        style={{ background: "var(--glow-emerald)" }}
       />
     </div>
   );

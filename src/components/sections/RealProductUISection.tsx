@@ -33,7 +33,10 @@ function BrowserChrome({
       className={`panel-ring absolute w-full max-w-[420px] overflow-hidden rounded-xl bg-surface shadow-[0_60px_100px_-30px_rgba(0,0,0,0.8)] ${className}`}
       style={style}
     >
-      <div className="flex items-center gap-1.5 bg-gradient-to-b from-[#16191d] to-[#101215] px-3.5 py-2.5 shadow-[0_1px_0_var(--color-border)]">
+      <div
+        className="flex items-center gap-1.5 px-3.5 py-2.5 shadow-[0_1px_0_var(--color-border)]"
+        style={{ background: "linear-gradient(180deg, var(--color-surface-2), var(--color-surface))" }}
+      >
         <span className="h-2 w-2 rounded-full bg-[#e05a4e]" />
         <span className="h-2 w-2 rounded-full bg-[#e0a83f]" />
         <span className="h-2 w-2 rounded-full bg-[#3fa860]" />
@@ -52,9 +55,9 @@ export function RealProductUISection() {
       className="relative overflow-hidden border-b border-border bg-surface/40 px-8 py-24 sm:px-16"
     >
       <ParallaxLayer
-        speed={0.18}
-        className="pointer-events-none absolute top-5 right-[-6rem] h-[31rem] w-[31rem] rounded-full opacity-70 blur-[80px]"
-        style={{ background: "radial-gradient(circle, rgba(34,211,238,0.10), transparent 70%)" }}
+        speed={0.28}
+        className="pointer-events-none absolute top-5 right-[-6rem] h-[31rem] w-[31rem] rounded-full blur-[80px]"
+        style={{ background: "var(--glow-cyan)" }}
       />
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-16 lg:grid-cols-[.85fr_1.15fr]">
         <div className="flex flex-col gap-3">

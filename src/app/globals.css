@@ -29,6 +29,16 @@
      specifies for this direction. Theme-independent, so it isn't repeated in
      the light block below. */
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Decorative glow-blob gradients (ParallaxLayer orbs, GridGlow) — shared
+     tokens rather than each component hardcoding its own rgba string, because
+     the right alpha is theme-dependent: a hazy blurred glow calibrated to read
+     softly against near-black is nearly invisible against a light background
+     (confirmed live — at 0.10 alpha it was indistinguishable from the page on
+     `#FAFAFA`, which made the parallax motion behind it unreadable, not just
+     subtle). Light overrides below use a darker, more saturated stop and
+     roughly double the alpha so the same blur radius still reads as a glow. */
+  --glow-emerald: radial-gradient(circle, rgba(52, 211, 153, 0.16), rgba(34, 211, 238, 0.07) 45%, transparent 70%);
+  --glow-cyan: radial-gradient(circle, rgba(34, 211, 238, 0.15), rgba(52, 211, 153, 0.06) 45%, transparent 70%);
 }
 
 /* Light theme — every pair here is WCAG-contrast-checked, see design.md → Theme toggle. */
@@ -45,6 +55,10 @@
   --border: rgba(0, 0, 0, 0.08);
   --destructive: #dc2626;
   --ring: #047857;
+  /* See root's --glow-* comment — darker/more saturated stops + higher alpha
+     so the same blur radius still reads as a glow on a light background. */
+  --glow-emerald: radial-gradient(circle, rgba(5, 150, 105, 0.32), rgba(8, 145, 178, 0.14) 45%, transparent 70%);
+  --glow-cyan: radial-gradient(circle, rgba(8, 145, 178, 0.32), rgba(5, 150, 105, 0.14) 45%, transparent 70%);
 }
 
 @theme inline {

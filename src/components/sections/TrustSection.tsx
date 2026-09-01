@@ -58,9 +58,9 @@ export function TrustSection() {
       className="relative overflow-hidden border-b border-border px-8 py-24 sm:px-16"
     >
       <ParallaxLayer
-        speed={0.15}
-        className="pointer-events-none absolute top-10 left-[-8rem] h-[26rem] w-[26rem] rounded-full opacity-60 blur-[80px]"
-        style={{ background: "radial-gradient(circle, rgba(52,211,153,0.10), transparent 70%)" }}
+        speed={0.25}
+        className="pointer-events-none absolute top-10 left-[-8rem] h-[26rem] w-[26rem] rounded-full blur-[80px]"
+        style={{ background: "var(--glow-emerald)" }}
       />
       <div className="relative mx-auto flex max-w-5xl flex-col gap-10">
         <Eyebrow>Trust</Eyebrow>
