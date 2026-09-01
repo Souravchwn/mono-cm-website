@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/lib/gsap";
 import { useScrollScene } from "@/lib/use-scroll-scene";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { HorizonFlythroughScene } from "@/components/scenes/HorizonFlythroughScene";
@@ -9,6 +11,37 @@ import { useWaitlistHandoff } from "@/lib/waitlist-handoff";
 import { scrollToSection } from "@/lib/scroll-to-section";
 
 const AUDIENCE = ["General Contractors", "Owners", "Subcontractors"];
+
+/**
+ * Headline, split for the per-character entrance animation the 21st.dev
+ * reference is built around (its `splitTitle` + staggered `gsap.from`).
+ *
+ * The gradient on "Production-Centric" can't survive that split: `bg-clip-text`
+ * needs one contiguous element, and animating each letter as its own
+ * transformed inline-block would either break the clip or restart the gradient
+ * inside every letter. So the gradient is *sampled per character* instead —
+ * each letter gets a colour interpolated emerald→cyan across the word, which
+ * looks identical at rest and leaves every letter independently animatable.
+ * Copy itself is unchanged (canonical, see context/content-spec.md).
+ */
+const ACCENT_FROM = [52, 211, 153] as const; // #34D399
+const ACCENT_TO = [34, 211, 238] as const; // #22D3EE
+
+const HEADLINE_SEGMENTS = [
+  { text: "The", gradient: false },
+  { text: "Production‑Centric", gradient: true },
+  { text: "Construction", gradient: false },
+  { text: "Engine.", gradient: false },
+];
+
+// Total gradient-word length, so colour ramps across the whole word.
+const GRADIENT_LEN = HEADLINE_SEGMENTS.find((s) => s.gradient)!.text.length;
+
+function gradientColor(index: number) {
+  const t = GRADIENT_LEN > 1 ? index / (GRADIENT_LEN - 1) : 0;
+  const c = ACCENT_FROM.map((from, i) => Math.round(from + (ACCENT_TO[i] - from) * t));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
 
 export function HeroSection() {
   const reducedMotion = useReducedMotion();
@@ -31,15 +64,43 @@ export function HeroSection() {
   // during the pin, so a separately-triggered ScrollTrigger would compute
   // its start/end off already-stuck geometry.
   const progressRef = useRef({ value: 0 });
+  const copyRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useScrollScene(
     (tl) => {
       tl.to(progressRef.current, { value: 1, ease: "none" });
+      // The copy rides the same zoom the camera does — a subtle scale-up and
+      // drift so the text feels attached to the scene rather than pasted over
+      // it. Deliberately small and opacity-free: this block holds the primary
+      // CTA, so it has to stay fully legible and clickable at every point in
+      // the scrub.
+      if (copyRef.current) {
+        tl.to(copyRef.current, { scale: 1.06, yPercent: -4, ease: "none" }, 0);
+      }
     },
     () => {
       // Reduced motion: render the scroll-100% end-state directly, per
       // context/storyboard.md's reduced-motion rule.
       progressRef.current.value = 1;
     },
+  );
+
+  // Per-character entrance — the reference component's signature move
+  // (`gsap.from` on split chars, staggered, power4.out). Runs once on mount,
+  // independent of the scroll timeline above.
+  useGSAP(
+    () => {
+      if (reducedMotion || !copyRef.current) return;
+      const chars = copyRef.current.querySelectorAll<HTMLElement>(".hero-char");
+      if (!chars.length) return;
+      gsap.from(chars, {
+        yPercent: 115,
+        opacity: 0,
+        duration: 1.1,
+        stagger: 0.022,
+        ease: "power4.out",
+      });
+    },
+    { scope: copyRef, dependencies: [reducedMotion] },
   );
 
   return (
@@ -50,7 +111,11 @@ export function HeroSection() {
         <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col justify-center overflow-hidden border-b border-border px-8 sm:px-16">
           <HorizonFlythroughScene progressRef={progressRef} reducedMotion={reducedMotion} />
 
-          <div className="relative z-[1] mx-auto flex w-full max-w-7xl flex-col items-start gap-6">
+          <div
+            ref={copyRef}
+            className="relative z-[1] mx-auto flex w-full max-w-7xl flex-col items-start gap-6"
+            style={{ transformOrigin: "0% 50%" }}
+          >
             {/* Fixed dark-mode accent (#34D399), not the theme token: in light
                 mode --accent-bright is a darker #059669 tuned for contrast on
                 a light page background, which reads poorly against this
@@ -74,12 +139,47 @@ export function HeroSection() {
               near-black in light mode and became unreadable against its own
               dark background — confirmed live before this fix.
             */}
-            <h1 className="font-display text-[clamp(2.75rem,2rem+4vw,5.6rem)] leading-[0.98] font-semibold tracking-tight text-balance text-[#F5F7F8]">
-              The{" "}
-              <span className="bg-gradient-to-r from-accent-bright to-cyan bg-clip-text text-transparent">
-                Production&#8209;Centric
-              </span>{" "}
-              Construction Engine.
+            {/*
+              Split per character for the staggered entrance (see
+              HEADLINE_SEGMENTS above). `aria-label` carries the real sentence
+              so assistive tech reads it as one string rather than spelling out
+              40 individual letter spans; the visual spans are aria-hidden.
+
+              Two things deliberately absent, both of which broke this when
+              tried: `overflow-hidden` on the word wrappers (intended as a
+              reveal mask, but it clipped the long gradient word — the tail of
+              "Production-Centric" was cut off and re-rendered on the wrong
+              line), and `text-balance` on the h1 (its line-balancing fights a
+              headline built from inline-block spans). The reference component
+              animates y + opacity with no mask either, so nothing is lost.
+
+              The font-size clamp is retuned for phones: "Production‑Centric" is
+              18 characters joined by a non-breaking hyphen inside a
+              `whitespace-nowrap` wrapper, so it can never wrap — it has to
+              *fit*. The previous `clamp(2.75rem, 2rem+4vw, …)` resolved to
+              ~49px on a 420px screen, needing ~435px against the ~356px
+              available inside the page padding, and overflowed. This curve
+              lands ~37px there while resolving identically from ~1500px up, so
+              desktop sizing is unchanged.
+            */}
+            <h1
+              aria-label="The Production-Centric Construction Engine."
+              className="font-display text-[clamp(2.3rem,0.9rem+5.2vw,5.6rem)] leading-[0.98] font-semibold tracking-tight text-[#F5F7F8]"
+            >
+              {HEADLINE_SEGMENTS.map((segment, si) => (
+                <span key={si} aria-hidden="true" className="inline-block whitespace-nowrap">
+                  {Array.from(segment.text).map((char, ci) => (
+                    <span
+                      key={ci}
+                      className="hero-char inline-block"
+                      style={segment.gradient ? { color: gradientColor(ci) } : undefined}
+                    >
+                      {char}
+                    </span>
+                  ))}
+                  {si < HEADLINE_SEGMENTS.length - 1 ? " " : null}
+                </span>
+              ))}
             </h1>
             <p className="max-w-md text-lg text-[#9AA4AC]">
               One source of truth for every dollar, drawing, material, and worker on your site.

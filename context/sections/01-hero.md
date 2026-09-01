@@ -94,4 +94,18 @@ trees and cars — the user's "I'm building a real world in the software." Full 
 live-found bugs, and the palette reasoning in `design.md` → "The flythrough, third staging: one
 mountain, city on the far side."
 
+**Terrain is real 3D as of the following pass**, not flat silhouette cut-outs — those were
+see-through, vanished edge-on during the loop, and showed hard rectangular bottoms. It is now a
+displaced heightfield, faceted/low-poly to match the buildings, spanning the full frame width.
+Building roofs got their own material (the window texture was previously stretched across the
+tops), and the whole scene is perf-tiered by viewport width — geometry density, star count, pixel
+ratio, antialias and the bloom pass all scale down on phones.
+
+**The headline animates**, using the reference component's split-text entrance: per-character
+stagger on mount plus a subtle scale/drift tied to the camera's scroll timeline. The
+"Production‑Centric" gradient is sampled per character rather than applied with `bg-clip-text`,
+which cannot survive a character split. Copy unchanged. See `design.md` → "Hero terrain becomes
+real 3D; headline gets the reference's split-text entrance" for the full log, including why the
+ridge needs two directional lights and why its height is sized against the closing shot.
+
 `HeroSection`'s pin went `h-[200vh] → h-[300vh]` to give four beats room without feeling rushed.

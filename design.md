@@ -1141,6 +1141,101 @@ visible as regular stripes across the skyline. Both now use `hash01()` (`src/lib
 to a shared module since two scenes need it) for lit/unlit *and* per-window brightness — uniform
 brightness was half of why a window grid read as a texture rather than as windows.
 
+## Hero terrain becomes real 3D; headline gets the reference's split-text entrance (2026-09-01)
+
+Four things, all from watching it run.
+
+**1. The hills were 2D and it showed.** Every version up to here drew them as flat
+`ShapeGeometry` cut-outs standing in the scene. Infinitely thin, so: you could see the city
+*through* the "solid" hills, they vanished entirely when viewed edge-on from above during the loop,
+and their flat bottoms read as rectangular cards hanging in space. Replaced with a single displaced
+heightfield — a subdivided plane whose vertices are pushed up by `terrainHeight()` (asymmetric
+ridge: long approach slope, fast drop to the city plain, multi-octave `hash01` value noise for
+distinct summits). It is genuinely solid, occludes from every angle, and reads as one continuous
+landscape. `flatShading` keeps it faceted and low-poly to match the illustrated buildings. The
+ridge also now spans 4200 units so it fills the frame edge-to-edge, per "extend those hills."
+
+**2. Building tops were broken.** The window texture was applied to all six faces of every
+`BoxGeometry`, stretching a row of arched windows across each roof — obvious the moment the camera
+rose above them. Now a material array puts the window texture on the sides only and a flat,
+lightened body colour on top/bottom (`[side,side,roof,roof,side,side]` for boxes,
+`[side,roof,roof]` for the cylinders).
+
+**3. Perf is tiered** off viewport width (`TIER`), because this is the heaviest thing on the page
+and the first paint: terrain subdivision (170×120 → 72×54), stars (1400 → 420), buildings, cars,
+trees, pixel ratio (2 → 1.5), antialias, and the `UnrealBloomPass` (dropped entirely on phones —
+it's a multi-pass blur and the difference between a smooth scrub and a slideshow).
+
+**4. The headline now uses the reference component's split-text entrance** — per-character stagger
+(`gsap.from`, y + opacity, `power4.out`), plus a subtle scale/drift on the copy block tied to the
+same scroll timeline that drives the camera, so the text feels attached to the zoom rather than
+pasted over it. The gradient on "Production‑Centric" can't survive a character split
+(`bg-clip-text` needs one contiguous element), so the gradient is **sampled per character**
+instead — each letter gets a colour interpolated emerald→cyan across the word. Identical at rest,
+and every letter stays independently animatable. Copy is unchanged.
+
+**Three real bugs found while tuning this, worth not rediscovering:**
+- **A single directional light left the ridge black in the closing shot.** The camera crosses the
+  ridge and looks *back* at it, so it sees the near face on the way out and the far face at the
+  end. One light from +z meant the far face got ambient only and rendered flat black — the closing
+  composition lost its background even though the geometry was right there, well inside the
+  frustum. Fixed with a second `fill` directional from −z. Ambient is deliberately kept *below* the
+  directionals: pushed high enough to guarantee visibility it flattens the facets into one uniform
+  blue field and the ridge stops reading as a ridge.
+- **Terrain palette and fog were tuned for a foreground silhouette, not a background subject.**
+  Distant ranges are *lighter* than the foreground (atmospheric perspective) — that's what the
+  Denver reference shows. Palette lightened substantially and the fog colour moved from near-black
+  to a mid slate-blue, since fog can only sell distance by pulling far geometry toward something
+  lighter than the sky behind it.
+- **Ridge height has to be sized against the closing shot, not the opening one.** At `PEAK = 620`
+  the summits sat past 25° above eye level from the final camera — above the frame edge — so the
+  mountain rendered as a featureless wall filling the top of the screen with no silhouette. `430`
+  puts them at 8–17°, occupying the upper third with sky above.
+
+**Responsive fix found by arithmetic, not by eye:** "Production‑Centric" is 18 characters joined by
+a non-breaking hyphen inside a `whitespace-nowrap` wrapper, so it can never wrap — it has to *fit*.
+The old `clamp(2.75rem, 2rem+4vw, …)` resolved to ~49px on a 420px screen, needing ~435px against
+the ~356px available inside the page padding. Retuned to `clamp(2.3rem, 0.9rem+5.2vw, 5.6rem)`,
+which lands ~37px there and resolves identically from ~1500px up, so desktop sizing is unchanged.
+
+**Verifying animation in the automation browser:** `requestAnimationFrame` is throttled there — a
+`await new Promise(r => requestAnimationFrame(r))` never resolves, and each screenshot forces
+exactly one frame. Time-based entrance tweens therefore appear frozen mid-flight in screenshots
+even though they are fine in a real browser. Verify layout by measuring
+`getBoundingClientRect()` on the word wrappers (they should land on two lines with no overlap)
+rather than trusting the pixels, and remember scroll-scrubbed work still checks out because scroll
+events drive it directly.
+
+## City moved forward, foreground tree belt added (2026-09-02)
+
+**City forward:** `CITY_Z` −350 → −600. At the old depth it sat 800 out from the closing camera
+and only ~210 in front of the ridge, so it read small and the two planes crowded each other. At
+−600 it is 550 out (noticeably larger) and 460 clear of the ridge, which is what gives the closing
+frame its city-in-front / mountains-behind separation.
+
+**Trees, two populations.** "In front of the buildings, big and small" needs both a foreground belt
+and street planting; one evenly scattered set gives neither. 42% sit in a belt at local z
+−310…−150 — ahead of the nearest building band — at scale 2.6–6.0; the rest are street trees along
+the road grid at 0.65–1.7. Per-instance colour variation (`instanceColor`) across two greens stops
+them reading as one stamped shape. Counts roughly doubled per tier. Still a single `InstancedMesh`,
+so it remains one draw call.
+
+The belt's depth is set by what the closing camera can actually see: from y≈170 with a 60° FOV the
+ground only enters frame beyond ~300 units out, so a belt any nearer would sit entirely below the
+bottom edge. A few of the big ones clipping the bottom edge is wanted, not a bug — that is what
+sells foreground depth.
+
+**Two bugs found doing this:**
+- **Scaled trees sank into the ground.** `dummy.position.y` was a fixed `5` while scale varied, but
+  `ConeGeometry` is centred on its origin — so only a scale-1 cone sat on the ground and a scale-4
+  one was buried 15 units, rendering as a stub. Position is now `5 * scale`. Worth remembering for
+  any instanced prop scattered at varying scale.
+- **A near-empty stretch appeared around progress 0.7.** The camera flies *backwards* here — moving
+  −z while facing +z — so a stop placed mid-city (z=−500) had three of the four building bands
+  behind it and almost nothing ahead. Moved to −830, past the city's near edge, so the whole
+  skyline is in frame from that beat onward; the 0.55→0.7 leg still crosses the city at 420→240,
+  both well above the 215 tallest tower.
+
 ## Accessibility & responsive baseline
 
 Full checklist lives in `MASTER.md`. Non-negotiables worth repeating here: 4.5:1 text contrast
