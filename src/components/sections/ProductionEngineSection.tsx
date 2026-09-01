@@ -18,6 +18,13 @@ const CHIPS_GROUP_2 = [
   { label: "Forecast", value: "+Updated Projection" },
 ];
 
+// Small precise vertical stagger, no rotation — see design.md → "Premium
+// material pass": rotated/wobbly tags read as sloppy, not premium. Applied
+// via margin, not transform: the reveal animation below drives `transform`
+// (translate-y-2 as the hidden state, GSAP tweening y to 0), so a permanent
+// stagger needs a property GSAP never touches or the two would fight.
+const CHIP_OFFSET = ["0px", "-5px", "3px"];
+
 export function ProductionEngineSection() {
   const wrapperRef = useScrollScene(
     (tl) => {
@@ -39,49 +46,66 @@ export function ProductionEngineSection() {
   return (
     <section id="02-production-engine" aria-label="Production Engine">
       <div ref={wrapperRef} className="relative h-[200vh]">
-        <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-10 border-b border-border px-8 sm:px-16">
-          <Eyebrow>02 — Production Engine</Eyebrow>
-
-          <div className="relative">
-            <div className="grid grid-cols-4 gap-2">
-              {Array.from({ length: ROOMS }, (_, i) => (
-                <div
-                  key={i}
-                  data-selected={i === SELECTED_ROOM}
-                  className="h-14 w-14 rounded-md border border-border bg-surface data-[selected=true]:border-accent-bright data-[selected=true]:opacity-100 data-[selected=true]:shadow-[0_0_24px_rgba(52,211,153,0.35)] opacity-70 sm:h-16 sm:w-16"
-                  style={i === SELECTED_ROOM ? { opacity: 0 } : undefined}
-                />
-              ))}
+        <div className="sticky top-16 flex h-[calc(100vh-4rem)] items-center border-b border-border px-8 sm:px-16">
+          <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-start gap-14 sm:grid-cols-[.95fr_1.05fr] sm:gap-10">
+            {/* Left: room grid + production event */}
+            <div>
+              <Eyebrow>Production Engine</Eyebrow>
+              <div className="relative mt-7 grid max-w-[280px] grid-cols-4 gap-2">
+                {Array.from({ length: ROOMS }, (_, i) => (
+                  <div
+                    key={i}
+                    data-selected={i === SELECTED_ROOM}
+                    className="panel-ring aspect-square rounded-md bg-surface opacity-70 data-[selected=true]:bg-accent/[0.14] data-[selected=true]:opacity-100 data-[selected=true]:shadow-[0_0_30px_-4px_rgba(52,211,153,0.5)]"
+                    style={i === SELECTED_ROOM ? { opacity: 0 } : undefined}
+                  />
+                ))}
+              </div>
+              <p
+                data-event-label
+                className="panel-ring mt-4 inline-block translate-y-2 rounded-full bg-surface px-3.5 py-1.5 text-sm whitespace-nowrap text-accent-bright opacity-0"
+              >
+                Concrete poured — 25 m³
+              </p>
             </div>
-            <p
-              data-event-label
-              className="absolute top-full left-1/2 mt-3 -translate-x-1/2 translate-y-2 rounded-full border border-accent-bright/40 bg-surface px-4 py-1.5 text-sm whitespace-nowrap text-accent-bright opacity-0"
-            >
-              Concrete poured — 25 m³
-            </p>
-          </div>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {[...CHIPS_GROUP_1.map((c) => ({ ...c, group: 1 })), ...CHIPS_GROUP_2.map((c) => ({ ...c, group: 2 }))].map(
-              (chip) => (
-                <div
-                  key={chip.label}
-                  data-chip-group={chip.group}
-                  className="translate-y-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm opacity-0"
-                >
-                  <span className="text-foreground-muted">{chip.label}</span>{" "}
-                  <span className="font-medium text-foreground">{chip.value}</span>
-                </div>
-              ),
-            )}
-          </div>
+            {/* Right: cascading update chips + pull-quote */}
+            <div className="pt-1">
+              <div className="flex flex-wrap gap-2.5">
+                {CHIPS_GROUP_1.map((chip, i) => (
+                  <div
+                    key={chip.label}
+                    data-chip-group="1"
+                    className="panel-ring translate-y-2 rounded-[10px] bg-surface-2 px-3.5 py-2.5 text-[13px] opacity-0 shadow-[0_16px_30px_-16px_rgba(0,0,0,0.6)]"
+                    style={{ marginTop: CHIP_OFFSET[i] }}
+                  >
+                    <span className="text-foreground-muted">{chip.label}</span>{" "}
+                    <span className="font-semibold text-foreground tabular-nums">{chip.value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3.5 ml-7 flex flex-wrap gap-2.5">
+                {CHIPS_GROUP_2.map((chip, i) => (
+                  <div
+                    key={chip.label}
+                    data-chip-group="2"
+                    className="panel-ring translate-y-2 rounded-[10px] bg-surface-2 px-3.5 py-2.5 text-[13px] opacity-0 shadow-[0_16px_30px_-16px_rgba(0,0,0,0.6)]"
+                    style={{ marginTop: CHIP_OFFSET[i] }}
+                  >
+                    <span className="text-foreground-muted">{chip.label}</span>{" "}
+                    <span className="font-semibold text-foreground tabular-nums">{chip.value}</span>
+                  </div>
+                ))}
+              </div>
 
-          <p
-            data-key-message
-            className="text-h2 max-w-xl translate-y-2 text-center font-display font-medium text-foreground opacity-0"
-          >
-            When production moves on the drawing, everything else moves automatically.
-          </p>
+              <p
+                data-key-message
+                className="mt-6 translate-y-2 bg-gradient-to-b from-foreground to-foreground-muted bg-clip-text text-[clamp(1.5rem,1.15rem+1.6vw,2.5rem)] leading-[1.18] font-semibold tracking-tight text-balance text-transparent opacity-0"
+              >
+                When production moves on the drawing, everything else moves automatically.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </section>

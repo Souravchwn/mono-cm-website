@@ -10,6 +10,10 @@
 :root {
   --background: #0a0b0d;
   --surface: #14171a;
+  /* Lifted surface — one step brighter than --surface, for panels/cards that need to
+     read as "raised" above the section background (proof card, founder block, waitlist
+     card). See design.md → "Premium material pass". */
+  --surface-2: #1b1f23;
   --foreground: #f5f7f8;
   --foreground-muted: #9aa4ac;
   --accent: #10b981;
@@ -21,12 +25,17 @@
   --border: rgba(255, 255, 255, 0.08);
   --destructive: #f87171;
   --ring: #34d399;
+  /* Expo.out — the easing the ui-ux-pro-max "Modern Dark" style entry
+     specifies for this direction. Theme-independent, so it isn't repeated in
+     the light block below. */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Light theme — every pair here is WCAG-contrast-checked, see design.md → Theme toggle. */
 :root[data-theme="light"] {
   --background: #fafafa;
   --surface: #f0f2f3;
+  --surface-2: #e7eaec;
   --foreground: #0a0b0d;
   --foreground-muted: #5b6470;
   --accent: #047857;
@@ -41,6 +50,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-foreground: var(--foreground);
   --color-foreground-muted: var(--foreground-muted);
   --color-accent: var(--accent);
@@ -71,23 +81,218 @@
   --text-label--line-height: 1.4;
 }
 
-body {
+html {
+  scroll-behavior: smooth;
   background: var(--background);
+}
+
+/*
+ * Native scrollbars hidden everywhere — ScrollProgress.tsx (the bar across the
+ * top) is this site's scroll indicator, and a second one down the right edge is
+ * exactly the duplication it's meant to replace.
+ *
+ * Three declarations because no single one covers every engine, and `*` rather
+ * than just `html` so nested scroll areas (e.g. AnimatedSelect's option list)
+ * match the page instead of showing an OS bar of their own:
+ *   - `scrollbar-width: none`     Firefox (the standard property)
+ *   - `-ms-overflow-style: none`  legacy Edge / IE
+ *   - `::-webkit-scrollbar`       Chrome, Safari, Edge, Opera — every
+ *                                 WebKit/Blink browser, on macOS, Windows,
+ *                                 Linux, iOS and Android
+ *
+ * Scrolling itself is untouched: wheel, trackpad, touch, keyboard and
+ * Page/Home/End behave exactly as before. The one real cost is that dragging a
+ * scrollbar thumb is no longer possible, since there is no thumb to drag.
+ */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+body {
+  /* Transparent so html's background shows through behind the fixed texture
+     layers below — lets those sit at z-index:-1 (invisible if body itself
+     painted an opaque background over them) while still staying behind every
+     normal-flow section, without touching z-index on any section component.
+     See design.md → "Premium material pass" for why this exists. */
+  background: transparent;
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  position: relative;
   transition:
     background-color 200ms ease,
     color 200ms ease;
 }
 
-html {
-  scroll-behavior: smooth;
+/* Blueprint grid — faint site-wide texture so sections read as one continuous
+   surface instead of a stack of flat slide backgrounds. color-mix against
+   --foreground so it's legible in both themes without a separate light-mode
+   value. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* Same grid, packaged as a class rather than a pseudo-element so individual
+   sections (Waitlist, Footer) can drop it in locally — body::before above is
+   masked to the page top and has faded out well before the page's lower
+   sections, so those need their own instance. Kept in sync with body::before
+   by hand since a pseudo-element can't be given a class to share. */
+.bg-blueprint-grid {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* Grain — the detail that separates a flat digital gradient from a considered
+   material; Stripe/Linear/Vercel all carry this at low opacity on dark. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 /* Focus visibility — never remove, per design-system/mono-cm-website/MASTER.md checklist. */
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/*
+ * Premium material pass (see design.md): flat 1px borders read as "outlined
+ * boxes"; a box-shadow ring + a hairline top inset highlight reads as a lit
+ * object instead. Shared here so Hero/BentoCard/TrustSection/WaitlistSection
+ * don't each hand-roll the same box-shadow string.
+ */
+.panel-ring {
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+.panel-raised {
+  background: linear-gradient(160deg, var(--color-surface-2), var(--color-surface));
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    0 1px 0 rgba(255, 255, 255, 0.05) inset;
+}
+.panel-floating {
+  background: linear-gradient(160deg, var(--color-surface-2), var(--color-surface));
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 40px 70px -30px rgba(0, 0, 0, 0.75);
+}
+
+/*
+ * Surface & motion pass (see design.md → "Surface & motion pass"). One easing
+ * curve and one elevation step, defined once, so every interactive surface on
+ * the site answers the cursor the same way — the `ui-ux-pro-max` style entry
+ * for this direction specifies Expo.out with a 0.97 press scale, and its
+ * `elevation-consistent` rule is the reason this is a shared class rather
+ * than a per-component box-shadow string.
+ */
+.card-lift {
+  transition:
+    transform 220ms var(--ease-expo),
+    background-color 220ms var(--ease-expo),
+    box-shadow 220ms var(--ease-expo);
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  background-color: var(--color-surface-2);
+  box-shadow:
+    0 0 0 1px rgba(52, 211, 153, 0.34),
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 22px 40px -26px rgba(0, 0, 0, 0.9);
+}
+
+/* Press feedback for buttons — the control should read as physically
+   depressed, not merely recoloured. */
+.press-feedback {
+  transition:
+    transform 220ms var(--ease-expo),
+    box-shadow 220ms var(--ease-expo),
+    background-color 220ms var(--ease-expo),
+    filter 220ms var(--ease-expo);
+}
+.press-feedback:active {
+  transform: scale(0.97);
+}
+
+/* Both of the above are motion; honour the OS setting. */
+@media (prefers-reduced-motion: reduce) {
+  .card-lift:hover {
+    transform: none;
+  }
+  .press-feedback:active {
+    transform: none;
+  }
+}
+
+/*
+ * Orbit rotation for OrbitalDiagram — pure CSS, GPU-composited. The earlier
+ * version drove rotation from a JS setInterval writing a new `transform`
+ * into React state ~20x/second, with `transition-all duration-700` also
+ * applied to that same transform — the element was permanently mid-transition
+ * chasing a target that had already moved again, which read as a visible
+ * glitch/stutter rather than a smooth spin. A CSS animation has no such
+ * fight: the browser interpolates the whole 360° purely on the compositor
+ * thread. `orbit-counter-spin` runs the identical keyframe in reverse on each
+ * node's inner content so icons/labels stay upright while their container
+ * orbits — see OrbitalDiagram.tsx for how the two combine.
+ */
+@keyframes orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-orbit-spin {
+  animation: orbit-spin 60s linear infinite;
+}
+.animate-orbit-counter-spin {
+  animation: orbit-spin 60s linear infinite reverse;
+}
+
+/*
+ * Legacy-systems "scatter in" (ComparisonSection) — each disconnected system
+ * card drifts in from a slightly exaggerated version of its own resting
+ * tilt and settles. The motion itself is the point: it's what "disconnected
+ * systems" looks like, next to the orbital diagram's single connected chain
+ * on the other side of the same section — see design.md's governing
+ * animation rule (motion must explain something, not decorate).
+ */
+@keyframes legacy-scatter-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94) rotate(calc(var(--legacy-rotate, 0deg) * 2.4));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(var(--legacy-rotate, 0deg));
+  }
+}
+.animate-legacy-scatter-in {
+  animation: legacy-scatter-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Reveal-on-scroll baseline for the Reveal component (non-pinned sections). */
@@ -111,5 +316,12 @@ html {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+  }
+  .animate-orbit-spin,
+  .animate-orbit-counter-spin,
+  .animate-legacy-scatter-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: rotate(var(--legacy-rotate, 0deg)) !important;
   }
 }

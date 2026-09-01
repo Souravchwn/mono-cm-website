@@ -3,6 +3,9 @@ import { Space_Grotesk, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import { FloatingControls } from "@/components/FloatingControls";
+import { Header } from "@/components/Header";
+import { ScrollProgress } from "@/components/ScrollProgress";
+import { WaitlistHandoffProvider } from "@/lib/waitlist-handoff";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -36,8 +39,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
-        {children}
-        <FloatingControls />
+        {/* Wraps the header too — its CTA hands off to the same waitlist form. */}
+        <WaitlistHandoffProvider>
+          <ScrollProgress />
+          <Header />
+          {children}
+          <FloatingControls />
+        </WaitlistHandoffProvider>
       </body>
     </html>
   );

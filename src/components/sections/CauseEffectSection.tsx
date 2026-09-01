@@ -1,71 +1,57 @@
 "use client";
 
-import { useMemo } from "react";
-import { useScrollScene } from "@/lib/use-scroll-scene";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { useRef } from "react";
+import { MousePointerClick } from "lucide-react";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-import { DiagramScene3D } from "@/components/scenes/DiagramScene3D";
-import { CAUSE_EFFECT_NODES, createDiagramState } from "@/lib/scene-config";
+import { OrbitalDiagram } from "@/components/scenes/OrbitalDiagram";
+import { PRODUCTION_CHAIN } from "@/lib/production-chain";
+import { useOrbitalScrollStep } from "@/lib/use-orbital-scroll-step";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 export function CauseEffectSection() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
-  const state = useMemo(() => {
-    const s = createDiagramState(CAUSE_EFFECT_NODES);
-    // The production event itself isn't a "consequence" — it's always visible,
-    // only what it triggers reveals on scroll.
-    s.nodes.production.value = 1;
-    return s;
-  }, []);
-
-  const wrapperRef = useScrollScene(
-    (tl) => {
-      tl.to(
-        [state.nodes.material, state.nodes.labor, state.nodes.equipment],
-        { value: 1, stagger: 0.08, duration: 0.15, ease: "none" },
-        0.1,
-      )
-        .to(
-          [
-            state.edges["production-material"],
-            state.edges["production-labor"],
-            state.edges["production-equipment"],
-          ],
-          { value: 1, stagger: 0.08, duration: 0.15, ease: "none" },
-          0.1,
-        )
-        .to(
-          [
-            state.edges["material-schedule"],
-            state.edges["labor-schedule"],
-            state.edges["equipment-schedule"],
-          ],
-          { value: 1, stagger: 0.05, duration: 0.15, ease: "none" },
-          0.4,
-        )
-        .to(state.nodes.schedule, { value: 1, duration: 0.1, ease: "none" }, 0.55)
-        .to(state.edges["schedule-forecast"], { value: 1, duration: 0.15, ease: "none" }, 0.7)
-        .to(state.nodes.forecast, { value: 1, duration: 0.15, ease: "none" }, 0.8);
-    },
-    () => {
-      Object.values(state.nodes).forEach((o) => (o.value = 1));
-      Object.values(state.edges).forEach((o) => (o.value = 1));
-    },
-  );
+  const { expandedId, setExpandedId } = useOrbitalScrollStep(wrapperRef, PRODUCTION_CHAIN, {
+    start: "top top",
+    end: "bottom bottom",
+  });
 
   return (
     <section id="03-cause-effect" aria-label="Cause and Effect / Data Flow">
-      <div ref={wrapperRef} className="relative h-[200vh]">
-        <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-8 border-b border-border px-8 py-16 sm:px-16">
-          <Eyebrow>03 — Cause &amp; Effect</Eyebrow>
-          <p className="max-w-md text-center text-sm text-foreground-muted">
-            One production event. Every downstream system updates from it.
-          </p>
-          <div className="relative aspect-[4/5] w-full max-w-sm sm:max-w-md">
-            <DiagramScene3D
-              nodes={CAUSE_EFFECT_NODES}
-              state={state}
-              animate={!reducedMotion}
-              ariaLabel="3D diagram: a production event branching into material, labor, and equipment updates, converging through schedule into a cash-flow forecast"
+      <div ref={wrapperRef} className="relative h-[300vh]">
+        <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4 border-b border-border px-8 py-16 sm:px-16">
+          <div className="flex flex-col items-center gap-3">
+            <Eyebrow>Cause &amp; Effect</Eyebrow>
+            {/* This section had no heading element at all — its lead line is a
+                <p>, so it was invisible in the document outline / heading
+                navigation. Hidden visually to leave the existing design as-is. */}
+            <h2 className="sr-only">One production event updates every downstream system</h2>
+            <p className="max-w-md text-center text-sm text-foreground-muted">
+              One production event. Every downstream system updates from it.
+            </p>
+            {/* The description explains the concept; this is a separate,
+                visually distinct affordance telling the visitor the diagram
+                below is actually interactive — a plain sentence blends into
+                body copy and gets skimmed past. */}
+            <span className="panel-ring inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-xs font-medium text-accent-bright">
+              <MousePointerClick size={13} className={reducedMotion ? "" : "animate-pulse"} />
+              Scroll to trace it, or click a node directly
+            </span>
+          </div>
+          {/* Width caps at both 42rem (max-w-2xl, unchanged from before) and
+              a viewport-height-derived limit — on a short window (~800px),
+              the uncapped 672px-tall diagram plus the eyebrow/description/pill
+              stack above it and this section's own py-16 could add up to more
+              than the pinned `h-[calc(100vh-4rem)]` box, and centering
+              (`justify-center`) an overflowing flex group pushes it out both
+              top *and bottom* — the top spill lands behind the fixed header,
+              reading as clipped/garbled text scrolling underneath it. */}
+          <div className="relative aspect-square w-[min(100%,42rem,calc(100vh_-_24rem))]">
+            <OrbitalDiagram
+              nodes={PRODUCTION_CHAIN}
+              expandedId={expandedId}
+              onExpandedChange={setExpandedId}
+              ariaLabel="Orbital diagram: a production event branching into material, labor, and equipment updates, converging through schedule into a cash-flow forecast — click a node for detail"
             />
           </div>
         </div>
